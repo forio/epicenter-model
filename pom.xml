@@ -7,13 +7,31 @@
   <packaging>pom</packaging>
   <name>Model</name>
   <description>Root POM</description>
-  <url>https://github.com/forio/epicenter-toolbox</url>
-
+  <url>https://github.com/forio/epicenter-model</url>
+  <licenses>
+    <license>
+      <name>Apache License, Version 2.0</name>
+      <url>https://www.apache.org/licenses/LICENSE-2.0</url>
+      <distribution>repo</distribution>
+    </license>
+  </licenses>
   <scm>
     <connection>scm:git@github.com:forio/epicenter-model.git</connection>
     <developerConnection>scm:git@github.com:forio/epicenter-model.git</developerConnection>
     <url>https://github.com/forio/epicenter-model</url>
   </scm>
+  <developers>
+    <developer>
+      <id>david.berkman</id>
+      <name>David Berkman</name>
+      <email>dberkman@forio.com</email>
+    </developer>
+    <developer>
+      <id>will.glass-husain</id>
+      <name>Will Glass-Husain</name>
+      <email>wglass@forio.com</email>
+    </developer>
+  </developers>
 
   <profiles>
     <profile>
