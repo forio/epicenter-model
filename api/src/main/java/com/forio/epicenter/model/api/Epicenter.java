@@ -33,6 +33,7 @@ public class Epicenter {
     return epicenterAccessibleLocal.get().setContextClassLoader(thread);
   }
 
+  // For example, Epicenter.constructForkJoinPool(2).submit(() -> LongStream.rangeClosed(0,5).parallel().forEach(number -> System.out.println(number)).get();
   public static ForkJoinPool constructForkJoinPool (int parallelism) {
 
     return epicenterAccessibleLocal.get().constructForkJoinPool(parallelism);
