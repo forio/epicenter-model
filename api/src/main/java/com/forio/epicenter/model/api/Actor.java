@@ -21,6 +21,7 @@ import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.bind.annotation.adapters.XmlJavaTypeAdapter;
+import org.graalvm.polyglot.HostAccess;
 
 @XmlRootElement(name = "actor")
 @XmlAccessorType(XmlAccessType.PROPERTY)
@@ -41,6 +42,7 @@ public class Actor {
     this.worldRole = worldRole;
   }
 
+  @HostAccess.Export
   @XmlElement(name = "pseudonym_key", required = true)
   public String getPseudonymKey () {
 
@@ -52,6 +54,7 @@ public class Actor {
     this.pseudonymKey = pseudonymKey;
   }
 
+  @HostAccess.Export
   @XmlElement(name = "group_mandate")
   @XmlJavaTypeAdapter(GroupMandateEnumXmlAdapter.class)
   public GroupMandate getGroupMandate () {
@@ -64,6 +67,7 @@ public class Actor {
     this.groupMandate = groupMandate;
   }
 
+  @HostAccess.Export
   @XmlElement(name = "world_role")
   public String getWorldRole () {
 

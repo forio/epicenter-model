@@ -18,6 +18,7 @@ package com.forio.epicenter.model.api;
 
 import java.util.concurrent.ForkJoinPool;
 import java.util.function.Consumer;
+import org.graalvm.polyglot.HostAccess;
 
 public class Epicenter {
 
@@ -28,22 +29,26 @@ public class Epicenter {
     epicenterAccessibleLocal.set(epicenterAccessible);
   }
 
+  @HostAccess.Export
   public static Thread setContextClassLoader (Thread thread) {
 
     return epicenterAccessibleLocal.get().setContextClassLoader(thread);
   }
 
   // For example, Epicenter.constructForkJoinPool(2).submit(() -> LongStream.rangeClosed(0,5).parallel().forEach(number -> System.out.println(number)).get();
+  @HostAccess.Export
   public static ForkJoinPool constructForkJoinPool (int parallelism) {
 
     return epicenterAccessibleLocal.get().constructForkJoinPool(parallelism);
   }
 
+  @HostAccess.Export
   public static Actor getActor () {
 
     return epicenterAccessibleLocal.get().getActor();
   }
 
+  @HostAccess.Export
   public static void subscribe (String name, Consumer<Object[]> consumer) {
 
     EpicenterAccessible epicenterUtility;
@@ -53,6 +58,7 @@ public class Epicenter {
     }
   }
 
+  @HostAccess.Export
   public static void publish (String name, Object... arguments) {
 
     EpicenterAccessible epicenterUtility;
@@ -62,6 +68,7 @@ public class Epicenter {
     }
   }
 
+  @HostAccess.Export
   public static void record (String name, Object value) {
 
     EpicenterAccessible epicenterUtility;
@@ -71,6 +78,7 @@ public class Epicenter {
     }
   }
 
+  @HostAccess.Export
   public static void log (LogLevel level, String message) {
 
     EpicenterAccessible epicenterUtility;
@@ -80,6 +88,7 @@ public class Epicenter {
     }
   }
 
+  @HostAccess.Export
   public static void scribble (LogLevel level, String message) {
 
     EpicenterAccessible epicenterUtility;
@@ -89,6 +98,7 @@ public class Epicenter {
     }
   }
 
+  @HostAccess.Export
   public static void callback (String name, Object... arguments) {
 
     EpicenterAccessible epicenterUtility;

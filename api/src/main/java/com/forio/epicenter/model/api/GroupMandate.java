@@ -16,7 +16,16 @@
  */
 package com.forio.epicenter.model.api;
 
+import org.graalvm.polyglot.HostAccess;
+
 public enum GroupMandate {
 
-  FACILITATOR, REVIEWER, LEADER, PARTICIPANT
+  @HostAccess.Export
+  FACILITATOR,
+  @HostAccess.Export
+  REVIEWER,
+  @HostAccess.Export
+  LEADER,
+  @HostAccess.Export
+  PARTICIPANT
 }

@@ -16,9 +16,24 @@
  */
 package com.forio.epicenter.model.api;
 
+import org.graalvm.polyglot.HostAccess;
+
 public enum LogLevel {
 
-  TRACE, DEBUG, INFO, WARN, ERROR, FATAL, OFF;
+  @HostAccess.Export
+  TRACE,
+  @HostAccess.Export
+  DEBUG,
+  @HostAccess.Export
+  INFO,
+  @HostAccess.Export
+  WARN,
+  @HostAccess.Export
+  ERROR,
+  @HostAccess.Export
+  FATAL,
+  @HostAccess.Export
+  OFF;
 
   public boolean atLeast (LogLevel logLevel) {
 
