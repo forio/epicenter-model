@@ -23,7 +23,7 @@ public class LogLevelEnumXmlAdapter extends XmlAdapter<String, LogLevel> {
   @Override
   public LogLevel unmarshal (String name) {
 
-    return (name == null) ? null : LogLevel.valueOf(name);
+    return (name == null) ? null : LogLevel.valueOf(EnumUtility.toEnumName(name));
   }
 
   @Override
