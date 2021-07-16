@@ -18,8 +18,6 @@ package com.forio.epicenter.model.api.mock;
 
 import java.util.concurrent.ForkJoinPool;
 import java.util.function.Consumer;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.forio.epicenter.model.api.Actor;
 import com.forio.epicenter.model.api.EpicenterAccessible;
 import com.forio.epicenter.model.api.LogLevel;
@@ -45,17 +43,17 @@ public class MockEpicenterAccessibleImpl implements EpicenterAccessible {
   }
 
   @Override
-  public void subscribe (String name, Consumer<ArrayNode> consumer) {
+  public void subscribe (String name, Consumer<Object[]> consumer) {
 
   }
 
   @Override
-  public void publish (String name, ArrayNode arguments) {
+  public void publish (String name, Object... arguments) {
 
   }
 
   @Override
-  public void record (String name, JsonNode value) {
+  public void record (String name, Object value) {
 
   }
 
@@ -70,7 +68,7 @@ public class MockEpicenterAccessibleImpl implements EpicenterAccessible {
   }
 
   @Override
-  public void callback (String name, ArrayNode arguments) {
+  public void callback (String name, Object... arguments) {
 
   }
 }
