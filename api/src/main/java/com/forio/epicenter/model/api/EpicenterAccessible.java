@@ -18,6 +18,8 @@ package com.forio.epicenter.model.api;
 
 import java.util.concurrent.ForkJoinPool;
 import java.util.function.Consumer;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ArrayNode;
 
 public interface EpicenterAccessible {
 
@@ -27,15 +29,15 @@ public interface EpicenterAccessible {
 
   Actor getActor ();
 
-  void subscribe (String name, Consumer<Object[]> consumer);
+  void subscribe (String name, Consumer<ArrayNode> consumer);
 
-  void publish (String name, Object... arguments);
+  void publish (String name, ArrayNode arguments);
 
-  void record (String name, Object value);
+  void record (String name, JsonNode value);
 
   void log (LogLevel level, String message);
 
   void scribble (LogLevel level, String message);
 
-  void callback (String name, Object... arguments);
+  void callback (String name, ArrayNode arguments);
 }

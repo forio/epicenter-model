@@ -18,6 +18,8 @@ package com.forio.epicenter.model.api;
 
 import java.util.concurrent.ForkJoinPool;
 import java.util.function.Consumer;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ArrayNode;
 import org.graalvm.polyglot.HostAccess;
 
 public class Epicenter {
@@ -49,7 +51,7 @@ public class Epicenter {
   }
 
   @HostAccess.Export
-  public static void subscribe (String name, Consumer<Object[]> consumer) {
+  public static void subscribe (String name, Consumer<ArrayNode> consumer) {
 
     EpicenterAccessible epicenterUtility;
 
@@ -59,7 +61,7 @@ public class Epicenter {
   }
 
   @HostAccess.Export
-  public static void publish (String name, Object... arguments) {
+  public static void publish (String name, ArrayNode arguments) {
 
     EpicenterAccessible epicenterUtility;
 
@@ -69,7 +71,7 @@ public class Epicenter {
   }
 
   @HostAccess.Export
-  public static void record (String name, Object value) {
+  public static void record (String name, JsonNode value) {
 
     EpicenterAccessible epicenterUtility;
 
@@ -99,7 +101,7 @@ public class Epicenter {
   }
 
   @HostAccess.Export
-  public static void callback (String name, Object... arguments) {
+  public static void callback (String name, ArrayNode arguments) {
 
     EpicenterAccessible epicenterUtility;
 
