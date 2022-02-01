@@ -18,18 +18,20 @@ package com.forio.epicenter.model.api;
 
 public class ProxyConfig {
 
-  private String accountShortName;
-  private String projectShortName;
-  private String apiHostUrl;
-  private String apiSharedSecret;
-  private int externalPort;
-  private int debugPort;
+  private final String accountShortName;
+  private final String projectShortName;
+  private final String apiScheme;
+  private final String apiHost;
+  private final String apiSharedSecret;
+  private final int externalPort;
+  private final int debugPort;
 
-  public ProxyConfig (String accountShortName, String projectShortName, String apiHostUrl, String apiSharedSecret, int externalPort, int debugPort) {
+  public ProxyConfig (String accountShortName, String projectShortName, String apiScheme, String apiHost, String apiSharedSecret, int externalPort, int debugPort) {
 
     this.accountShortName = accountShortName;
     this.projectShortName = projectShortName;
-    this.apiHostUrl = apiHostUrl;
+    this.apiScheme = apiScheme;
+    this.apiHost = apiHost;
     this.apiSharedSecret = apiSharedSecret;
     this.externalPort = externalPort;
     this.debugPort = debugPort;
@@ -45,9 +47,14 @@ public class ProxyConfig {
     return projectShortName;
   }
 
-  public String getApiHostUrl () {
+  public String getApiScheme () {
 
-    return apiHostUrl;
+    return apiScheme;
+  }
+
+  public String getApiHost () {
+
+    return apiHost;
   }
 
   public String getApiSharedSecret () {
