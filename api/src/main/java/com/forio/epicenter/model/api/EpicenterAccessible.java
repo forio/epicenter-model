@@ -16,6 +16,7 @@
  */
 package com.forio.epicenter.model.api;
 
+import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Path;
 import java.util.concurrent.ForkJoinPool;
@@ -31,7 +32,8 @@ public interface EpicenterAccessible {
 
   ProxyConfig getProxyConfig ();
 
-  InputStream read (Path path);
+  InputStream read (Path path)
+    throws IOException;
 
   void subscribe (String name, Consumer<Object[]> consumer);
 

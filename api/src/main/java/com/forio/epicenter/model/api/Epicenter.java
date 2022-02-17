@@ -16,6 +16,9 @@
  */
 package com.forio.epicenter.model.api;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.Path;
 import java.util.concurrent.ForkJoinPool;
 import java.util.function.Consumer;
 import org.graalvm.polyglot.HostAccess;
@@ -40,6 +43,19 @@ public class Epicenter {
   public static Actor getActor () {
 
     return epicenterAccessibleLocal.get().getActor();
+  }
+
+  @HostAccess.Export
+  public static ProxyConfig getProxyConfig () {
+
+    return epicenterAccessibleLocal.get().getProxyConfig();
+  }
+
+  @HostAccess.Export
+  public static InputStream read (Path path)
+    throws IOException {
+
+    return epicenterAccessibleLocal.get().read(path);
   }
 
   @HostAccess.Export
