@@ -16,6 +16,8 @@
  */
 package com.forio.epicenter.model.api.mock;
 
+import java.io.InputStream;
+import java.nio.file.Path;
 import java.util.concurrent.ForkJoinPool;
 import java.util.function.Consumer;
 import com.forio.epicenter.model.api.Actor;
@@ -45,6 +47,12 @@ public class MockEpicenterAccessibleImpl implements EpicenterAccessible {
 
   @Override
   public ProxyConfig getProxyConfig () {
+
+    return null;
+  }
+
+  @Override
+  public InputStream read (Path path) {
 
     return null;
   }
