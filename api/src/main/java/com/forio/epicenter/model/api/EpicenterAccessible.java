@@ -43,7 +43,5 @@ public interface EpicenterAccessible {
 
   void log (LogLevel level, String message);
 
-  void scribble (LogLevel level, String message);
-
   void callback (String name, Object... arguments);
 }

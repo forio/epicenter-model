@@ -99,16 +99,6 @@ public class Epicenter {
   }
 
   @HostAccess.Export
-  public static void scribble (LogLevel level, String message) {
-
-    EpicenterAccessible epicenterAccessible;
-
-    if ((epicenterAccessible = epicenterAccessibleLocal.get()) != null) {
-      epicenterAccessible.scribble(level, message);
-    }
-  }
-
-  @HostAccess.Export
   public static void callback (String name, Object... arguments) {
 
     EpicenterAccessible epicenterAccessible;

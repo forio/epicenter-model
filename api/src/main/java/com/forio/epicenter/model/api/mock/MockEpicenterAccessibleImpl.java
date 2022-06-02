@@ -78,11 +78,6 @@ public class MockEpicenterAccessibleImpl implements EpicenterAccessible {
   }
 
   @Override
-  public void scribble (LogLevel level, String message) {
-
-  }
-
-  @Override
   public void callback (String name, Object... arguments) {
 
   }
