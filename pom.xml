@@ -3,7 +3,7 @@
 
   <groupId>com.forio.epicenter</groupId>
   <artifactId>epicenter-model</artifactId>
-  <version>2.1.0</version>
+  <version>3.0.0</version>
   <packaging>pom</packaging>
   <name>Model</name>
   <description>Root POM</description>
