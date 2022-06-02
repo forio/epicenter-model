@@ -76,7 +76,7 @@
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <graal.version>20.1.0</graal.version>
+    <graal.version>21.3.0</graal.version>
     <jaxb.version>3.0.1</jaxb.version>
   </properties>
 
