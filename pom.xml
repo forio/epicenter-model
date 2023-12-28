@@ -3,7 +3,7 @@
 
   <groupId>com.forio.epicenter</groupId>
   <artifactId>epicenter-model</artifactId>
-  <version>3.0.0</version>
+  <version>3.0.2</version>
   <packaging>pom</packaging>
   <name>Model</name>
   <description>Root POM</description>
@@ -76,9 +76,9 @@
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <graal.version>21.3.0</graal.version>
-    <jakarta.xml.bind.version>4.0.0</jakarta.xml.bind.version>
-    <sun.xml.bind.version>4.0.1</sun.xml.bind.version>
+    <graal.version>23.1.1</graal.version>
+    <jakarta.xml.bind.version>4.0.1</jakarta.xml.bind.version>
+    <sun.xml.bind.version>4.0.4</sun.xml.bind.version>
   </properties>
 
   <modules>
