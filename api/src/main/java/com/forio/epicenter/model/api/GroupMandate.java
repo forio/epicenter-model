@@ -27,5 +27,25 @@ public enum GroupMandate {
   @HostAccess.Export
   LEADER,
   @HostAccess.Export
-  PARTICIPANT
+  PARTICIPANT;
+
+  public boolean lt (GroupMandate mandate) {
+
+    return ordinal() < mandate.ordinal();
+  }
+
+  public boolean lte (GroupMandate mandate) {
+
+    return ordinal() <= mandate.ordinal();
+  }
+
+  public boolean gte (GroupMandate mandate) {
+
+    return ordinal() >= mandate.ordinal();
+  }
+
+  public boolean gt (GroupMandate mandate) {
+
+    return ordinal() > mandate.ordinal();
+  }
 }
