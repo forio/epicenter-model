@@ -86,7 +86,6 @@
     <maven.surefire.plugin.version>3.2.5</maven.surefire.plugin.version>
     <nexus.staging.plugin.version>1.6.13</nexus.staging.plugin.version>
     <smallmind.version>6.0.0-SNAPSHOT</smallmind.version>
-    <sun.xml.bind.version>4.0.5</sun.xml.bind.version>
   </properties>
 
   <modules>
@@ -99,11 +98,6 @@
         <groupId>jakarta.xml.bind</groupId>
         <artifactId>jakarta.xml.bind-api</artifactId>
         <version>${jakarta.xml.bind.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>com.sun.xml.bind</groupId>
-        <artifactId>jaxb-impl</artifactId>
-        <version>${sun.xml.bind.version}</version>
       </dependency>
       <dependency>
         <groupId>org.graalvm.sdk</groupId>
