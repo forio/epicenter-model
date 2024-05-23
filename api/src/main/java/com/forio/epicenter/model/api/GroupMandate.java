@@ -21,6 +21,8 @@ import org.graalvm.polyglot.HostAccess;
 public enum GroupMandate {
 
   @HostAccess.Export
+  SUPERVISOR,
+  @HostAccess.Export
   FACILITATOR,
   @HostAccess.Export
   REVIEWER,
