@@ -32,30 +32,43 @@ public class Epicenter {
     epicenterAccessibleLocal.set(epicenterAccessible);
   }
 
+  public static void removeCurrent () {
+
+    epicenterAccessibleLocal.remove();
+  }
+
   // For example, Epicenter.constructForkJoinPool(2).submit(() -> LongStream.rangeClosed(0, 5).parallel().forEach(number -> System.out.println(number))).get();
   @HostAccess.Export
   public static ForkJoinPool constructForkJoinPool (int parallelism) {
 
-    return epicenterAccessibleLocal.get().constructForkJoinPool(parallelism);
+    EpicenterAccessible epicenterAccessible;
+
+    return ((epicenterAccessible = epicenterAccessibleLocal.get()) == null) ? null : epicenterAccessible.constructForkJoinPool(parallelism);
   }
 
   @HostAccess.Export
   public static Actor getActor () {
 
-    return epicenterAccessibleLocal.get().getActor();
+    EpicenterAccessible epicenterAccessible;
+
+    return ((epicenterAccessible = epicenterAccessibleLocal.get()) == null) ? null : epicenterAccessible.getActor();
   }
 
   @HostAccess.Export
   public static ProxyConfig getProxyConfig () {
 
-    return epicenterAccessibleLocal.get().getProxyConfig();
+    EpicenterAccessible epicenterAccessible;
+
+    return ((epicenterAccessible = epicenterAccessibleLocal.get()) == null) ? null : epicenterAccessible.getProxyConfig();
   }
 
   @HostAccess.Export
   public static InputStream read (Path path)
     throws IOException {
 
-    return epicenterAccessibleLocal.get().read(path);
+    EpicenterAccessible epicenterAccessible;
+
+    return ((epicenterAccessible = epicenterAccessibleLocal.get()) == null) ? null : epicenterAccessible.read(path);
   }
 
   @HostAccess.Export
