@@ -3,7 +3,7 @@
 
   <groupId>com.forio.epicenter</groupId>
   <artifactId>epicenter-model</artifactId>
-  <version>4.1.0</version>
+  <version>4.1.1</version>
   <packaging>pom</packaging>
   <name>Model</name>
   <description>Root POM</description>
@@ -85,7 +85,7 @@
     <maven.source.plugin.version>3.3.0</maven.source.plugin.version>
     <maven.surefire.plugin.version>3.2.5</maven.surefire.plugin.version>
     <nexus.staging.plugin.version>1.6.14</nexus.staging.plugin.version>
-    <smallmind.version>6.1.0</smallmind.version>
+    <smallmind.version>6.2.0</smallmind.version>
   </properties>
 
   <modules>
@@ -174,7 +174,7 @@
         </plugin>
         <plugin>
           <groupId>org.smallmind</groupId>
-          <artifactId>smallmind-license-plugin</artifactId>
+          <artifactId>smallmind-license-maven-plugin</artifactId>
           <version>${smallmind.version}</version>
           <executions>
             <execution>

@@ -4,7 +4,7 @@
   <parent>
     <groupId>com.forio.epicenter</groupId>
     <artifactId>epicenter-model</artifactId>
-    <version>4.1.0</version>
+    <version>4.1.1</version>
   </parent>
   <artifactId>model-api</artifactId>
   <name>Model-Api</name>
@@ -27,7 +27,7 @@
     <plugins>
       <plugin>
         <groupId>org.smallmind</groupId>
-        <artifactId>smallmind-license-plugin</artifactId>
+        <artifactId>smallmind-license-maven-plugin</artifactId>
       </plugin>
     </plugins>
   </build>
