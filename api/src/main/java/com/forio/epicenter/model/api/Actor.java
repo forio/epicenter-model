@@ -28,6 +28,8 @@ import org.graalvm.polyglot.HostAccess;
 public class Actor {
 
   private GroupMandate groupMandate;
+  private String groupKey;
+  private String worldKey;
   private String pseudonymKey;
   private String worldRole;
 
@@ -35,10 +37,12 @@ public class Actor {
 
   }
 
-  public Actor (String pseudonymKey, GroupMandate groupMandate, String worldRole) {
+  public Actor (String pseudonymKey, String groupKey, GroupMandate groupMandate, String worldKey, String worldRole) {
 
     this.pseudonymKey = pseudonymKey;
+    this.groupKey = groupKey;
     this.groupMandate = groupMandate;
+    this.worldKey = worldKey;
     this.worldRole = worldRole;
   }
 
@@ -55,6 +59,18 @@ public class Actor {
   }
 
   @HostAccess.Export
+  @XmlElement(name = "group_key")
+  public String getGroupKey () {
+
+    return groupKey;
+  }
+
+  public void setGroupKey (String groupKey) {
+
+    this.groupKey = groupKey;
+  }
+
+  @HostAccess.Export
   @XmlElement(name = "group_mandate")
   @XmlJavaTypeAdapter(GroupMandateEnumXmlAdapter.class)
   public GroupMandate getGroupMandate () {
@@ -65,6 +81,18 @@ public class Actor {
   public void setGroupMandate (GroupMandate groupMandate) {
 
     this.groupMandate = groupMandate;
+  }
+
+  @HostAccess.Export
+  @XmlElement(name = "world_key")
+  public String getWorldKey () {
+
+    return worldKey;
+  }
+
+  public void setWorldKey (String worldKey) {
+
+    this.worldKey = worldKey;
   }
 
   @HostAccess.Export

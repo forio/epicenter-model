@@ -2,7 +2,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>com.forio.epicenter</groupId>
   <artifactId>epicenter-model</artifactId>
-  <version>4.1.1</version>
+  <version>4.2.0</version>
   <packaging>pom</packaging>
   <name>Model</name>
   <description>Root POM</description>
@@ -48,7 +48,7 @@
           <plugin>
             <groupId>org.sonatype.central</groupId>
             <artifactId>central-publishing-maven-plugin</artifactId>
-            <version>0.7.0</version>
+            <version>0.9.0</version>
             <extensions>true</extensions>
             <configuration>
               <publishingServerId>central</publishingServerId>
@@ -76,16 +76,16 @@
   </distributionManagement>
 
   <properties>
-    <maven.compiler.release>17</maven.compiler.release>
+    <maven.compiler.release>21</maven.compiler.release>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <graal.version>24.1.1</graal.version>
-    <jakarta.xml.bind.version>4.0.2</jakarta.xml.bind.version>
-    <maven.compiler.plugin.version>3.12.1</maven.compiler.plugin.version>
-    <maven.gpg.plugin.version>3.2.0</maven.gpg.plugin.version>
+    <graal.version>25.0.1</graal.version>
+    <jakarta.xml.bind.version>4.0.4</jakarta.xml.bind.version>
+    <maven.compiler.plugin.version>3.14.1</maven.compiler.plugin.version>
+    <maven.gpg.plugin.version>3.2.7</maven.gpg.plugin.version>
     <maven.javadoc.plugin.version>3.6.3</maven.javadoc.plugin.version>
-    <maven.source.plugin.version>3.3.0</maven.source.plugin.version>
-    <maven.surefire.plugin.version>3.2.5</maven.surefire.plugin.version>
-    <smallmind.version>6.2.0</smallmind.version>
+    <maven.source.plugin.version>3.4.0</maven.source.plugin.version>
+    <maven.surefire.plugin.version>3.5.4</maven.surefire.plugin.version>
+    <smallmind.version>6.13.0</smallmind.version>
   </properties>
 
   <modules>
