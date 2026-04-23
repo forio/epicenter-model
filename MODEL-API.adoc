@@ -1,0 +1,766 @@
+= Model API: The Contract Between Model Code And The Epicenter Runtime
+:doctype: article
+:toc: left
+:toclevels: 3
+:sectanchors:
+:sectlinks:
+:source-highlighter: rouge
+:icons: font
+
+[[problem]]
+== The Problem This Solves
+
+Forio Epicenter runs simulation models inside a managed runtime. That runtime provides
+services the model needs but does not want to own: the identity of the actor whose
+request triggered the run, the URL and secret needed to reach the Epicenter API,
+resource storage, a configured `ForkJoinPool`, a publication/subscription bus, an
+output recorder, a logger, and a named callback registry.
+
+A model that links directly against the classes that provide those services becomes
+welded to one runtime. The runtime cannot be swapped, stubbed for tests, or evolved
+without dragging the model along. Worse, a model authored in a GraalVM guest language
+(JavaScript, Python, Ruby) cannot hold a Java object reference across a request
+boundary in a clean way, so there is no good place to stash the current runtime
+handle.
+
+The `model-api` artifact answers this with a narrow contract: a static facade
+({@code Epicenter}) that model code calls, and an installable bridge
+({@code EpicenterAccessible}) that the runtime sets on a per-thread basis for the
+duration of an execution. Model code never sees the runtime; the runtime never sees
+the model. Either side can be replaced, mocked, or embedded independently.
+
+[[at-a-glance]]
+== At A Glance
+
+[cols="2,3", options="header"]
+|===
+| Type | Role
+
+| `com.forio.epicenter.model.api.Epicenter`
+| Static facade. Model code calls these methods. Forwards to the thread's installed bridge.
+
+| `com.forio.epicenter.model.api.EpicenterAccessible`
+| The bridge contract. An embedding runtime implements this and installs an instance per thread.
+
+| `com.forio.epicenter.model.api.Actor`
+| Identity snapshot (pseudonym, group, mandate, world, role) for the actor whose request triggered the run.
+
+| `com.forio.epicenter.model.api.GroupMandate`
+| Enum of group roles: `FACILITATOR`, `REVIEWER`, `LEADER`, `PARTICIPANT`. Ordinals are contractual.
+
+| `com.forio.epicenter.model.api.LogLevel`
+| Enum of log severities: `TRACE`, `DEBUG`, `INFO`, `WARN`, `ERROR`, `FATAL`, `OFF`. Ordinals are contractual.
+
+| `com.forio.epicenter.model.api.ProxyConfig`
+| Immutable snapshot of API endpoint coordinates (scheme, host, ports, account, project, shared secret).
+
+| `com.forio.epicenter.model.api.GroupMandateEnumXmlAdapter`
+| JAXB adapter for `GroupMandate`. Exact-name match on unmarshal.
+
+| `com.forio.epicenter.model.api.LogLevelEnumXmlAdapter`
+| JAXB adapter for `LogLevel`. Case-insensitive, whitespace-tolerant on unmarshal via `EnumUtility`.
+
+| `com.forio.epicenter.model.api.EnumUtility`
+| Normalizes free-form text to Java enum constant form (`"warn level"` → `"WARN_LEVEL"`).
+
+| `com.forio.epicenter.model.api.mock.MockEpicenterAccessibleImpl`
+| No-op bridge for tests. Safe defaults on every method; subclass to inject test behavior.
+|===
+
+[[conceptual-model]]
+== Conceptual Model
+
+Three roles are in play.
+
+Model code::
+    The simulation logic. May be Java, or a GraalVM guest-language script that the
+    runtime evaluates on the host. Model code calls static methods on `Epicenter` to
+    reach runtime services and holds no reference to the bridge.
+
+Bridge (`EpicenterAccessible`)::
+    The runtime's implementation of the service contract. Owns class loader policy,
+    thread pool construction, actor resolution, endpoint configuration, resource
+    access, event routing, output persistence, logging, and the callback registry.
+
+Embedding runtime::
+    The host that prepares an execution: it creates a bridge, installs it on the
+    current thread via `Epicenter.setCurrent`, invokes the model, and removes it via
+    `Epicenter.removeCurrent` in a `finally` block.
+
+The bridge is stored in an `InheritableThreadLocal<EpicenterAccessible>`. That
+choice has two consequences worth naming:
+
+* Child threads created *after* `setCurrent` inherit the same bridge value.
+* `removeCurrent` clears only the calling thread's slot. Threads that already
+  inherited the value keep seeing it until they exit or clear it themselves.
+
+Guest-language access is served by the `@HostAccess.Export` annotation on every
+bridge-forwarding method of `Epicenter`, on `Actor` getters, and on the enum
+constants of `GroupMandate` and `LogLevel`. GraalVM polyglot code can invoke those
+surfaces without the embedding runtime having to extend its host-access policy.
+`setCurrent` and `removeCurrent` are deliberately *not* exported; lifecycle is a
+Java host concern.
+
+[[installation]]
+== Installation
+
+A library that contains model code — or any code that calls `Epicenter` statics —
+depends only on the API artifact.
+
+[source,xml]
+----
+<dependency>
+  <groupId>com.forio.epicenter</groupId>
+  <artifactId>model-api</artifactId>
+  <version>${project.version}</version>
+</dependency>
+----
+
+The artifact transitively pulls in:
+
+* `jakarta.xml.bind:jakarta.xml.bind-api` — JAXB annotations on `Actor` and the
+  two XML adapters. A runtime JAXB implementation is *not* bundled; if the
+  consuming application actually marshals or unmarshals, it must add one
+  (for example `org.glassfish.jaxb:jaxb-runtime`).
+* `org.graalvm.sdk:graal-sdk` — provides `org.graalvm.polyglot.HostAccess.Export`.
+  Required at compile time. At runtime, it is required only when the bridge is
+  invoked from GraalVM guest code; pure-Java consumers that never touch a
+  polyglot context can exclude it.
+
+An application that hosts the runtime adds its chosen runtime implementation on
+top of this dependency; this artifact intentionally does not ship one.
+
+The project targets Java 21 (`<maven.compiler.release>21</maven.compiler.release>`
+in the root POM). Consuming projects must compile and run on Java 21 or later.
+
+[[quick-start]]
+== Quick Start
+
+Two viewpoints exist. Read the one that matches what you are building.
+
+=== Model-Author View
+
+You are writing simulation code that runs inside an Epicenter deployment. Call the
+static methods on `Epicenter`. Do not construct anything.
+
+[source,java]
+----
+import com.forio.epicenter.model.api.Actor;
+import com.forio.epicenter.model.api.Epicenter;
+import com.forio.epicenter.model.api.GroupMandate;
+import com.forio.epicenter.model.api.LogLevel;
+
+public final class PricingModel {
+
+  public double runTurn (double inventory, double demand) {
+
+    Actor actor = Epicenter.getActor();                              // <1>
+    if (actor != null && actor.getGroupMandate() != null             // <2>
+          && actor.getGroupMandate().gte(GroupMandate.LEADER)) {
+      Epicenter.log(LogLevel.INFO, "Leader-scoped adjustment path"); // <3>
+    }
+
+    double price = Math.max(1.0, demand / Math.max(1.0, inventory));
+    Epicenter.record("price", price);                                // <4>
+    Epicenter.publish("turn.completed", price, inventory, demand);   // <5>
+    return price;
+  }
+}
+----
+<1> Identity of the actor whose request drove this execution. Any field may be `null`.
+<2> Guard both the actor and the mandate — the runtime populates only fields the
+    deployment context actually carries.
+<3> Emit a message. The bridge applies any configured minimum level.
+<4> Report an output the surrounding system should persist.
+<5> Signal a named event. Subscribers registered through `Epicenter.subscribe` receive it.
+
+=== Runtime-Author View
+
+You are embedding model code inside a host. Implement `EpicenterAccessible`,
+install it before invoking the model, and remove it in `finally`.
+
+[source,java]
+----
+import com.forio.epicenter.model.api.Epicenter;
+import com.forio.epicenter.model.api.EpicenterAccessible;
+
+public final class RequestExecutor {
+
+  private final EpicenterAccessible bridge; // Your concrete implementation.
+
+  public RequestExecutor (EpicenterAccessible bridge) {
+
+    this.bridge = bridge;
+  }
+
+  public <T> T run (java.util.concurrent.Callable<T> modelCall)
+    throws Exception {
+
+    Epicenter.setCurrent(bridge);   // <1>
+    try {
+      return modelCall.call();
+    } finally {
+      Epicenter.removeCurrent();    // <2>
+    }
+  }
+}
+----
+<1> Installs the bridge on the *calling* thread. Child threads created from here
+    inherit it.
+<2> Clears the slot on the calling thread. Inherited values on sibling threads are
+    not affected; those threads must clear themselves or exit.
+
+[[bridge-lifecycle]]
+== Bridge Lifecycle
+
+Every bridge-forwarding call on `Epicenter` reads an
+`InheritableThreadLocal<EpicenterAccessible>` slot and dispatches to the value it
+finds. The rules are:
+
+* `Epicenter.setCurrent(bridge)` sets the slot on the calling thread. Passing `null`
+  clears it without requiring a subsequent `removeCurrent` call.
+* `Epicenter.removeCurrent()` clears the slot on the calling thread only.
+* Threads spawned *after* `setCurrent` inherit the bridge value at spawn time.
+  Threads spawned *before* `setCurrent` do not.
+* When no bridge is installed on the current thread, the facade follows the
+  no-bridge contract documented in <<no-bridge-behavior>>.
+
+[IMPORTANT]
+====
+Always pair `setCurrent` with `removeCurrent` in a `try`/`finally`. A missed
+`removeCurrent` leaks the bridge to the next piece of work that runs on the same
+thread (typical in pooled-thread executors) and silently changes that work's
+runtime identity.
+====
+
+[[api-reference]]
+== API Reference
+
+=== The `Epicenter` Facade
+
+Static entry point for every model-to-runtime interaction. The class is not
+intended to be instantiated; the public no-arg constructor exists only so GraalVM
+and reflection tools can introspect it without error.
+
+[cols="2,2,3", options="header"]
+|===
+| Method | Return | Purpose
+
+| `setCurrent(EpicenterAccessible)`
+| `void`
+| Installs a bridge on the current thread. Not `@HostAccess.Export`.
+
+| `removeCurrent()`
+| `void`
+| Clears the bridge on the current thread. Not `@HostAccess.Export`.
+
+| `constructForkJoinPool(int parallelism)`
+| `ForkJoinPool` (may be `null`)
+| Requests a runtime-configured pool. Caller owns it and must shut it down.
+
+| `getActor()`
+| `Actor` (may be `null` when no bridge)
+| Identity snapshot for the current execution.
+
+| `getProxyConfig()`
+| `ProxyConfig` (may be `null`)
+| API endpoint snapshot for the current execution.
+
+| `read(Path)`
+| `InputStream` (may be `null`); throws `IOException`
+| Opens a bridge-managed resource. Caller closes the stream.
+
+| `subscribe(String, Consumer<Object[]>)`
+| `void`
+| Registers a consumer for a publication channel. No-op when no bridge.
+
+| `publish(String, Object...)`
+| `void`
+| Delivers a named event to subscribers. No-op when no bridge.
+
+| `record(String, Object)`
+| `void`
+| Records a named output value. No-op when no bridge.
+
+| `log(LogLevel, String)`
+| `void`
+| Emits a log message. The bridge applies level filtering. No-op when no bridge.
+
+| `callback(String, Object...)`
+| `void`
+| Invokes a named callback in the runtime registry. No-op when no bridge.
+|===
+
+All eight bridge-forwarding methods carry `@HostAccess.Export`, so GraalVM guest
+code can call them without additional host-access configuration.
+
+=== The `EpicenterAccessible` Bridge
+
+The service contract that an embedding runtime implements. Ten methods; every
+runtime concern model code might reach for lives here.
+
+[source,java]
+----
+public interface EpicenterAccessible {
+  Thread setContextClassLoader (Thread thread);
+  ForkJoinPool constructForkJoinPool (int parallelism);
+  Actor getActor ();
+  ProxyConfig getProxyConfig ();
+  InputStream read (Path path) throws IOException;
+  void subscribe (String name, Consumer<Object[]> consumer);
+  void publish (String name, Object... arguments);
+  void record (String name, Object value);
+  void log (LogLevel level, String message);
+  void callback (String name, Object... arguments);
+}
+----
+
+Notes that matter when implementing it:
+
+* **Thread-safety is mandatory.** Because the bridge lives in an
+  `InheritableThreadLocal`, several threads that inherited the same instance may
+  call it concurrently.
+* **`getActor` must not return `null`.** Return a default (possibly empty) actor
+  when no identity is available, so model code can invoke the getters without
+  guarding the actor reference itself. `MockEpicenterAccessibleImpl` demonstrates
+  the pattern.
+* **`getProxyConfig` may return `null`** when the runtime exposes no endpoint
+  configuration. Callers must null-check.
+* **`read(Path)` owns path interpretation.** It may resolve against a classpath,
+  an object store, a mounted filesystem, or anything else. The caller owns and
+  closes the returned stream. Returning `null` and throwing `IOException` are
+  both allowed signals for "not available"; pick one and document it in your
+  implementation's Javadoc.
+* **`setContextClassLoader`** is called by the runtime — not by model code —
+  before model code runs on a new thread, so the thread's context class loader
+  reflects the runtime's loading policy. Typically this returns the same thread
+  after mutating its context loader.
+* **`log` does its own filtering.** Callers do not pre-filter. Use
+  `messageLevel.atLeast(configuredMinimum)` to gate forwarding to your backend.
+
+=== `Actor`
+
+Identity snapshot carrying up to five fields. Every field may be `null` when the
+deployment context does not supply it; the runtime populates only what exists.
+
+[cols="2,1,4", options="header"]
+|===
+| Field | Getter | Meaning
+
+| `pseudonymKey` | `getPseudonymKey()`
+| Stable unique identifier for the actor. Present for any fully authenticated actor.
+
+| `groupKey` | `getGroupKey()`
+| Group the actor belongs to. `null` when the actor has no group association.
+
+| `groupMandate` | `getGroupMandate()`
+| The actor's role within the group, as a `GroupMandate` constant. `null` when none applies.
+
+| `worldKey` | `getWorldKey()`
+| Simulation world (instance) the actor is associated with. `null` when absent.
+
+| `worldRole` | `getWorldRole()`
+| Free-form role string within the world. Its meaning is defined by the runtime and model.
+|===
+
+`Actor` is JAXB-bound (`@XmlRootElement(name = "actor")`, property access) with
+snake_case element names: `pseudonym_key`, `group_key`, `group_mandate`,
+`world_key`, `world_role`. The `group_mandate` element uses
+`GroupMandateEnumXmlAdapter`. All five getters carry `@HostAccess.Export`.
+
+Two constructors are available: a no-arg form (for JAXB and incremental
+population) and a five-arg form that sets every field at once.
+
+=== `GroupMandate`
+
+Four enum constants in a contractual declaration order:
+
+[cols="1,1,4", options="header"]
+|===
+| Constant | Ordinal | Typical meaning
+
+| `FACILITATOR` | `0` | Coordinates or guides the group session.
+| `REVIEWER`    | `1` | Observes and evaluates without leading.
+| `LEADER`      | `2` | Designated lead within the group.
+| `PARTICIPANT` | `3` | Default role for a group member without a specialized function.
+|===
+
+The four ordinal-comparison helpers — `lt`, `lte`, `gte`, `gt` — let callers
+express access-control rules without referencing ordinal values directly:
+
+[source,java]
+----
+if (actor.getGroupMandate() != null
+      && actor.getGroupMandate().gte(GroupMandate.LEADER)) {
+  // LEADER or PARTICIPANT
+}
+----
+
+"Greater" means *later in declaration order*, not "higher authority". The four
+constants carry `@HostAccess.Export`; the comparison methods do not. Guest code
+can read the constants directly; whether it can invoke the comparisons depends on
+the embedding runtime's host-access policy.
+
+[WARNING]
+====
+Declaration order is part of the contract. Inserting or reordering constants
+breaks every call site that uses the `lt`/`lte`/`gte`/`gt` helpers or that
+depends on serialized ordinal values. Add new constants only at the end, and
+only when all consumers can tolerate it.
+====
+
+=== `LogLevel`
+
+Seven constants in ascending severity:
+
+[cols="1,1,4", options="header"]
+|===
+| Constant | Ordinal | When to use
+
+| `TRACE` | `0` | Fine-grained execution tracing; too verbose for routine debug use.
+| `DEBUG` | `1` | Diagnostic details for investigating a specific problem.
+| `INFO`  | `2` | Normal operational events confirming expected progress.
+| `WARN`  | `3` | Unexpected conditions that do not prevent execution from continuing.
+| `ERROR` | `4` | Failures that may affect results but do not halt execution entirely.
+| `FATAL` | `5` | Conditions from which execution cannot continue meaningfully.
+| `OFF`   | `6` | Sentinel for disabling all logging. Not meant as a message severity.
+|===
+
+Two helpers support threshold logic:
+
+* `atLeast(LogLevel)` — `true` when this level is at least as severe as the
+  argument. A bridge uses this to gate forwarding:
+  `messageLevel.atLeast(configuredMinimum)`.
+* `noGreater(LogLevel)` — `true` when this level is at most as severe as the
+  argument; useful when applying a configured ceiling.
+
+`allowedValues()` returns the lowercase names from this level through `OFF`,
+suitable for producing a user-facing list of valid minimum-level configuration
+values:
+
+[source,java]
+----
+String[] names = LogLevel.INFO.allowedValues();
+// ["info", "warn", "error", "fatal", "off"]
+----
+
+All seven constants carry `@HostAccess.Export`. Helpers do not.
+
+=== `ProxyConfig`
+
+Immutable snapshot of the API endpoint coordinates for the current deployment.
+No setters, no default constructor. The seven-arg constructor sets every field
+and performs no validation.
+
+[cols="1,1,3", options="header"]
+|===
+| Accessor | Type | Meaning
+
+| `getAccountShortName()` | `String` | Forio account identifier. URL path segment.
+| `getProjectShortName()` | `String` | Project / model identifier. URL path segment.
+| `getApiScheme()`        | `String` | Typically `http` or `https`.
+| `getApiHost()`          | `String` | API hostname.
+| `getApiSharedSecret()`  | `String` | Authentication credential. Treat as a secret.
+| `getExternalPort()`     | `int`    | Port for external proxy traffic; used when building reachable API URLs.
+| `getDebugPort()`        | `int`    | Distinct port intended for development and troubleshooting tooling.
+|===
+
+A typical API base URL, using the snapshot, has the form:
+
+[source,text]
+----
+{apiScheme}://{apiHost}:{externalPort}/api/v2/{accountShortName}/{projectShortName}
+----
+
+[IMPORTANT]
+====
+`apiSharedSecret` is a credential. Do not log it, record it through
+`Epicenter.record`, include it in published events, or expose it to
+guest-language code that does not already have equivalent trust.
+====
+
+The class has no JAXB or GraalVM annotations. It is a plain Java value type for
+host-side Java code.
+
+=== XML Adapters
+
+Two adapters bridge the two enums to XML. They behave differently by design.
+
+`GroupMandateEnumXmlAdapter`::
+    Exact-name match on unmarshal. `<group_mandate>LEADER</group_mandate>` works;
+    `<group_mandate>leader</group_mandate>` throws `IllegalArgumentException` from
+    `GroupMandate.valueOf(String)`. `null` round-trips to `null`. Attached
+    automatically to `Actor.getGroupMandate` via `@XmlJavaTypeAdapter`.
+
+`LogLevelEnumXmlAdapter`::
+    Normalized-name match on unmarshal. The XML string is first passed through
+    `EnumUtility.toEnumName(String)`, which uppercases, collapses whitespace, and
+    inserts underscore boundaries. `warn`, `Warn`, `WARN`, and even `warn level`
+    all unmarshal to `LogLevel.WARN`. This matches the expectation that log-level
+    configuration values arrive in whatever case the configuration format
+    happens to use.
+
+Both adapters marshal by returning `name()` — i.e., the declared constant form.
+Both return `null` when passed `null`.
+
+Use `LogLevelEnumXmlAdapter` explicitly (via `@XmlJavaTypeAdapter`) wherever a
+JAXB-bound property carries a `LogLevel`; it is not registered at the package
+level.
+
+=== `EnumUtility`
+
+Single public method, `toEnumName(String)`. It normalizes free-form text to the
+uppercase underscore-separated form a Java enum constant name takes. The
+transformation rules:
+
+. Whitespace becomes a word boundary (`_`).
+. Transitions between character categories (digit / uppercase / lowercase) are
+  word boundaries.
+. Consecutive underscores collapse to one; output never contains `__`.
+. Non-alphanumeric characters other than `_` are dropped.
+. Output is uppercased.
+
+[cols="2,2", options="header"]
+|===
+| Input | Output
+
+| `"debug"`       | `"DEBUG"`
+| `"Info Level"`  | `"INFO_LEVEL"`
+| `"fatalError"`  | `"FATAL_ERROR"`
+| `"iPhone"`      | `"I_PHONE"`
+| `"my_enum"`     | `"MY_ENUM"`
+|===
+
+The result is not validated. A subsequent `Enum.valueOf` throws
+`IllegalArgumentException` if no constant matches.
+
+[IMPORTANT]
+====
+`toEnumName` expects the first character to be a letter or digit. Inputs
+starting with whitespace, `_`, or other punctuation can throw
+`StringIndexOutOfBoundsException` when the first alphanumeric character is
+encountered. Feed it trimmed input; do not feed it raw user text.
+====
+
+=== `MockEpicenterAccessibleImpl`
+
+A drop-in `EpicenterAccessible` for tests and minimal embedding scenarios. Every
+method is safe by default:
+
+[cols="2,3", options="header"]
+|===
+| Method | Default behavior
+
+| `setContextClassLoader(Thread)` | Returns the supplied thread unchanged.
+| `constructForkJoinPool(int)`    | `new ForkJoinPool(parallelism, defaultForkJoinWorkerThreadFactory, null, false)`.
+| `getActor()`                    | Returns a new empty `Actor` (all fields `null`). Never `null` itself.
+| `getProxyConfig()`              | Returns `null`.
+| `read(Path)`                    | Returns `null`.
+| `subscribe` / `publish` / `record` / `log` / `callback` | Silent no-ops.
+|===
+
+Subclass it and override only the methods a specific test needs to control — for
+example, returning a known actor identity from `getActor()`, serving a test
+resource from `read(Path)`, or capturing log calls into a list.
+
+[source,java]
+----
+import com.forio.epicenter.model.api.Actor;
+import com.forio.epicenter.model.api.GroupMandate;
+import com.forio.epicenter.model.api.mock.MockEpicenterAccessibleImpl;
+
+final class LeaderActorBridge extends MockEpicenterAccessibleImpl {
+  @Override
+  public Actor getActor () {
+
+    return new Actor("user-42", "group-A", GroupMandate.LEADER, null, null);
+  }
+}
+----
+
+[[behavioral-reference]]
+== Behavioral Reference
+
+[[no-bridge-behavior]]
+=== No-Bridge Behavior
+
+When no bridge is installed on the current thread, the facade *does not throw*.
+This is a contract, not a bug. Model code is expected to be callable from
+environments where the runtime has not (yet) been set up — for example, during
+unit-level tests that do not go through `setCurrent`.
+
+[cols="2,2", options="header"]
+|===
+| Method | No-bridge behavior
+
+| `constructForkJoinPool(int)`     | Returns `null`.
+| `getActor()`                     | Returns `null`.
+| `getProxyConfig()`               | Returns `null`.
+| `read(Path)`                     | Returns `null`. Does not throw.
+| `subscribe`, `publish`, `record`, `log`, `callback` | Silent no-op.
+|===
+
+[NOTE]
+====
+The returning-method contract differs from the `EpicenterAccessible` contract
+in one place: `EpicenterAccessible.getActor()` must not return `null`, but
+`Epicenter.getActor()` can — precisely because there might not be a bridge
+installed. Model code that reaches `Epicenter.getActor()` defensively should
+null-check the returned `Actor` and its fields.
+====
+
+=== Thread Inheritance
+
+`InheritableThreadLocal` copies the *value* at child-thread-creation time. The
+value is the bridge reference, not a clone; a single bridge instance is shared
+across all threads that inherited it. Implementations must therefore be
+thread-safe (see `EpicenterAccessible`'s contract).
+
+`Epicenter.removeCurrent()` does not propagate to inherited threads. A long-lived
+pool thread that inherited a bridge keeps that bridge until it exits or
+explicitly calls `Epicenter.removeCurrent()` itself. Applications that reuse
+threads must factor this into their per-request wiring.
+
+=== GraalVM Host Access
+
+Every `@HostAccess.Export` annotation in this package is a declaration that
+guest-language code can reach the annotated member through a default
+host-access configuration. The set of exported surfaces is deliberately narrow:
+
+* Every bridge-forwarding method on `Epicenter`.
+* Every field getter on `Actor`.
+* Every constant of `GroupMandate` and `LogLevel`.
+
+Not exported:
+
+* `Epicenter.setCurrent`, `Epicenter.removeCurrent` (Java-host lifecycle).
+* The comparison helpers on `GroupMandate` and `LogLevel` (`lt`, `lte`, `gte`,
+  `gt`, `atLeast`, `noGreater`, `allowedValues`). Whether guest code can invoke
+  them depends on the embedding runtime's host-access policy.
+* `ProxyConfig` and its getters.
+
+Guest code can therefore call `Epicenter.log(...)` and read `actor.getGroupMandate()`,
+but it cannot rotate the bridge on its own thread.
+
+=== Error Surfaces
+
+Checked exceptions::
+    Only `EpicenterAccessible.read(Path)` and `Epicenter.read(Path)` declare
+    `IOException`. No other bridge-forwarding method declares a checked exception.
+
+Runtime exceptions::
+    Implementations may still throw runtime exceptions — for invalid arguments,
+    failed publication routing, or exhausted backends. The facade does not
+    catch them; they propagate to the caller. Your bridge implementation is
+    the right place to decide whether to catch-and-swallow, catch-and-log, or
+    rethrow.
+
+XML unmarshaling::
+    `GroupMandateEnumXmlAdapter.unmarshal` throws `IllegalArgumentException` on
+    any value that is not an exact constant name.
+    `LogLevelEnumXmlAdapter.unmarshal` throws `IllegalArgumentException` only
+    after normalization fails to match any constant.
+
+=== Resource Ownership
+
+The caller owns resources returned by the facade. Specifically:
+
+* `Epicenter.constructForkJoinPool(int)` — the caller must shut the pool down.
+* `Epicenter.read(Path)` — the caller must close the returned `InputStream`.
+
+The bridge may reuse internal resources across calls but must not hand out
+shared handles that would couple callers to its internal lifecycle.
+
+[[testing]]
+== Testing
+
+For unit tests that exercise model code without booting a real runtime, install
+a `MockEpicenterAccessibleImpl` (or a subclass with the overrides the test
+needs):
+
+[source,java]
+----
+import com.forio.epicenter.model.api.Epicenter;
+import com.forio.epicenter.model.api.mock.MockEpicenterAccessibleImpl;
+
+class PricingModelTest {
+
+  @BeforeEach
+  void installBridge () {
+
+    Epicenter.setCurrent(new MockEpicenterAccessibleImpl());
+  }
+
+  @AfterEach
+  void removeBridge () {
+
+    Epicenter.removeCurrent();
+  }
+
+  @Test
+  void priceIsNeverBelowOne () {
+
+    assertEquals(1.0, new PricingModel().runTurn(0, 0));
+  }
+}
+----
+
+To capture calls (for example, log output) without a test framework's spy
+machinery, subclass the mock and record into a field:
+
+[source,java]
+----
+final class CapturingBridge extends MockEpicenterAccessibleImpl {
+  final java.util.List<String> messages = new java.util.ArrayList<>();
+  @Override
+  public void log (com.forio.epicenter.model.api.LogLevel level, String message) {
+
+    messages.add(level + ": " + message);
+  }
+}
+----
+
+To test code that also runs without a bridge installed, simply do not call
+`setCurrent`; `Epicenter` will follow the no-bridge contract.
+
+[[limitations]]
+== Limitations and Known Issues
+
+No bridge registry::
+    The API exposes one slot per thread. There is no named registry and no way
+    to stack multiple bridges — installing a second one replaces the first.
+    Applications that need per-scope nesting must build it on top.
+
+`removeCurrent` does not cross threads::
+    Clearing the slot on thread A does not clear it on a child thread B that
+    inherited from A. Applications that reuse worker threads (thread pools)
+    must clear explicitly on every worker boundary.
+
+`EnumUtility.toEnumName` assumes alphanumeric-first input::
+    The first character must be a letter or digit. Non-alphanumeric prefixes
+    will provoke `StringIndexOutOfBoundsException`. Normalize upstream if that
+    is a possibility.
+
+No built-in runtime in this artifact::
+    `model-api` defines the contract and a no-op mock. It does not ship a
+    production `EpicenterAccessible` implementation. Applications must supply
+    one, or embed one that Forio provides in a separate artifact.
+
+XML adapters have different matching semantics::
+    `GroupMandate` is exact-match; `LogLevel` is normalized-match. This is
+    intentional — mandates are typed data authored by the system, levels are
+    configuration values authored by humans — but it is a surprise if you
+    assume symmetry. Use `EnumUtility` explicitly if you want normalized
+    matching for `GroupMandate`.
+
+[[see-also]]
+== See Also
+
+* <<problem,The Problem This Solves>>
+* <<conceptual-model,Conceptual Model>>
+* <<bridge-lifecycle,Bridge Lifecycle>>
+* <<behavioral-reference,Behavioral Reference>>
+* link:DESIGN_PHILOSOPHY.md[Design Philosophy] — the principles that shape this API (narrow contracts, caller-owned lifecycle, explicit wiring).
+* link:ASCIIDOC_DOC_AUTHORING_GUIDE.md[AsciiDoc Authoring Guide] — the style this document follows.
+* https://www.graalvm.org/latest/reference-manual/embed-languages/[GraalVM Polyglot Embedding] — context for the `@HostAccess.Export` annotations.
+* https://jakarta.ee/specifications/xml-binding/[Jakarta XML Binding] — the JAXB surface used by `Actor` and the two XML adapters.

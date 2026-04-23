@@ -1,0 +1,43 @@
+= Epicenter Model
+:doctype: book
+:toc: left
+:toclevels: 3
+:sectanchors:
+:sectlinks:
+:source-highlighter: rouge
+:icons: font
+
+[[about]]
+== About This Project
+
+`epicenter-model` is the Forio Epicenter model contract: the narrow, stable
+surface that simulation model code compiles against and that the Epicenter
+runtime implements. It exists so that model code and the hosting runtime can
+evolve independently — neither side takes a hard dependency on the other.
+
+The repository is a multi-module Maven project rooted at
+`com.forio.epicenter:epicenter-model`. The `api` module produces the
+`model-api` artifact: a static facade (`Epicenter`) that model code calls, an
+installable bridge (`EpicenterAccessible`) the runtime provides per thread,
+and the small set of value types and enums that cross that boundary. Models
+authored in Java or in any GraalVM guest language (JavaScript, Python, Ruby)
+reach runtime services — actor identity, endpoint configuration, resources,
+the thread pool, the pub/sub bus, the output recorder, the logger, and the
+callback registry — through that facade alone.
+
+[[purpose]]
+== Purpose
+
+The artifact answers a specific integration problem: a model that links
+directly against runtime classes becomes welded to one runtime and cannot be
+swapped, stubbed, or embedded independently. By routing every runtime call
+through a per-thread bridge, `model-api` lets model code be compiled once,
+tested against a mock bridge, and executed by any runtime that installs a
+conforming implementation.
+
+[[documents]]
+== Included Documents
+
+The following document is embedded below.
+
+include::MODEL-API.adoc[leveloffset=+1]
