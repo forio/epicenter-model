@@ -90,6 +90,7 @@
 
   <modules>
     <module>api</module>
+    <module>grid</module>
   </modules>
 
   <dependencyManagement>

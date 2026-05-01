@@ -1,0 +1,15 @@
+Package: ${applicationName?cap_first}
+Type: Package
+Title: An interface for working with R models in Epicenter
+Version: ${projectVersion}
+Authors@R: c(
+            person("David", "Berkman", email = "dberkman@forio.com", role = c("aut", "cre"))
+            )
+Description: The package enables interaction between R models and the Forio
+    Epicenter platform (http://www.forio.com/epicenter). This includes, but is
+    not necessarily limited to: recording data for runs, setting variables
+    adding custom setters and getters and registering event handlers.
+Depends: R (>= 3.1.0)
+License: Apache License (== 2.0)
+Copyright: Forio Corporation
+LazyData: true
