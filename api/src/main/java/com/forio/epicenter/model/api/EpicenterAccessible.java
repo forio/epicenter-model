@@ -116,6 +116,15 @@ public interface EpicenterAccessible {
     throws IOException;
 
   /**
+   * Asks the runtime to refresh the keep-alive timer of the worker executing the current model.
+   *
+   * <p>Model code calls this during long-running work to signal that it is still making progress
+   * so the runtime does not treat the worker as idle. What refreshing means, including how the
+   * timer is tracked and what happens when it expires, is implementation-defined.</p>
+   */
+  void refresh ();
+
+  /**
    * Registers a consumer to receive publications on the named channel.
    *
    * <p>When {@link #publish(String, Object...)} is called with the same name, the consumer

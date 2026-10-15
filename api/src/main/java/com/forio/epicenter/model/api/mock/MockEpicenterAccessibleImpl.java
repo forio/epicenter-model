@@ -146,6 +146,14 @@ public class MockEpicenterAccessibleImpl implements EpicenterAccessible {
   }
 
   /**
+   * Does nothing. Refresh requests are silently discarded.
+   */
+  @Override
+  public void refresh () {
+
+  }
+
+  /**
    * Does nothing. Subscription requests are silently discarded.
    *
    * @param name     the channel name; ignored.

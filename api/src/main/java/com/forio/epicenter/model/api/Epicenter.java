@@ -166,6 +166,25 @@ public class Epicenter {
   }
 
   /**
+   * Asks the installed bridge to refresh the keep-alive timer of the worker executing the current
+   * model.
+   *
+   * <p>Call this during long-running work to signal that the model is still making progress. What
+   * refreshing means is bridge-defined; see {@link EpicenterAccessible#refresh} for details.</p>
+   *
+   * <p>No-op when no bridge is installed.</p>
+   */
+  @HostAccess.Export
+  public static void refresh () {
+
+    EpicenterAccessible epicenterAccessible;
+
+    if ((epicenterAccessible = epicenterAccessibleLocal.get()) != null) {
+      epicenterAccessible.refresh();
+    }
+  }
+
+  /**
    * Registers a consumer for a named publication channel through the installed bridge.
    *
    * <p>When {@link #publish(String, Object...)} is called with the same name, the consumer

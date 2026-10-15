@@ -4,7 +4,7 @@
   <parent>
     <groupId>com.forio.epicenter</groupId>
     <artifactId>model-grid</artifactId>
-    <version>4.2.0</version>
+    <version>4.3.0</version>
   </parent>
   <artifactId>grid-worker</artifactId>
   <name>Grid-Worker</name>

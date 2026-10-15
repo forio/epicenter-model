@@ -1,8 +1,16 @@
+#' @title Ask the worker to refresh its keep-alive timer
+#' @description
+#' Asks the worker to refresh its keep-alive timer
+#' @keywords epicenter
+#' @export
+refresh <- function() {
+}
+
 #' @title Subscribe a listener to an event
 #' @description
 #' Subscribes a function to an event for later callback
 #' @param event character, an event name
-#' @param listener function, the callback fnction
+#' @param listener function, the callback function
 #' @keywords epicenter
 #' @export
 subscribe <- function(event, listener) {

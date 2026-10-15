@@ -6,6 +6,10 @@ Note - this is just a stub to allow code to run in a local IDE yet be uploaded t
 class Epicenter:
 
     @staticmethod
+    def refresh():
+        pass
+
+    @staticmethod
     def subscribe(name, function):
         pass
 
